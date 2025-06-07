@@ -12,8 +12,8 @@
 #include <sstream>
 #include <algorithm>
 
-// Constantes
-const std::string MOEDA = "AOA";
+// Constantes do sistema
+const std::string MOEDA = "AOA";  // Moeda utilizada (Kwanza)
 
 // Função para exibir o menu principal
 void displayMenu() {
@@ -28,17 +28,22 @@ void displayMenu() {
     std::cout << "0. Sair" << std::endl;
 }
 
-// Funções de validação
+/**
+ * Funções de validação para garantir a integridade dos dados
+ */
 bool isValidBI(const std::string& bi) {
+    // Remove espaços e hífens do BI
     std::string clean_bi = bi;
     clean_bi.erase(std::remove_if(clean_bi.begin(), clean_bi.end(), 
         [](char c) { return c == ' ' || c == '-'; }), clean_bi.end());
     
+    // Verifica se o BI tem entre 8 e 15 dígitos
     if (clean_bi.length() < 8 || clean_bi.length() > 15) return false;
     return std::all_of(clean_bi.begin(), clean_bi.end(), ::isdigit);
 }
 
 bool isValidDate(const std::string& date) {
+    // Valida formato DD-MM-AAAA e verifica se a data é válida
     std::regex date_pattern("^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\\d{4}$");
     if (!std::regex_match(date, date_pattern)) return false;
 
@@ -46,9 +51,11 @@ bool isValidDate(const std::string& date) {
     int month = std::stoi(date.substr(3, 2));
     int year = std::stoi(date.substr(6, 4));
 
+    // Validações básicas de data
     if (year < 1900 || year > 2024) return false;
     if (month < 1 || month > 12) return false;
     
+    // Verifica dias do mês, incluindo anos bissextos
     int days_in_month[] = {31,28,31,30,31,30,31,31,30,31,30,31};
     if (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)) days_in_month[1] = 29;
     
@@ -56,18 +63,23 @@ bool isValidDate(const std::string& date) {
 }
 
 bool isValidName(const std::string& name) {
+    // Valida nome: apenas letras, espaços e caracteres especiais comuns
     if (name.empty() || name.length() < 3) return false;
     std::regex name_pattern("^[A-Za-zÀ-ÿ\\s'-]+$");
     return std::regex_match(name, name_pattern);
 }
 
 bool isValidAmount(double amount) {
+    // Valida valores monetários: entre 0 e 10 milhões
     return amount > 0 && amount <= 10000000;
 }
 
-// Função genérica para entrada validada
+/**
+ * Funções de entrada de dados com validação
+ */
 template <typename T>
 T getValidatedInput(const std::string& prompt, bool validate = false) {
+    // Função genérica para entrada de dados numéricos
     T value;
     while (true) {
         std::cout << prompt;
@@ -91,8 +103,8 @@ T getValidatedInput(const std::string& prompt, bool validate = false) {
     }
 }
 
-// Especialização para std::string
 std::string getValidatedStringInput(const std::string& prompt, bool validate = false) {
+    // Função específica para entrada de strings com validação
     std::string value;
     while (true) {
         std::cout << prompt;
@@ -124,18 +136,21 @@ std::string formatAccountNumber(int number, int width) {
     return s.length() < width ? std::string(width - s.length(), '0') + s : s;
 }
 
-// Função principal
+/**
+ * Função principal do programa
+ */
 int main() {
     Bank umabank;
-    umabank.load_accounts();
+    umabank.load_accounts();  // Carrega contas existentes
 
     int choice;
     do {
         displayMenu();
         choice = getValidatedInput<int>("Escolha uma opcao: ");
 
+        // Menu de operações bancárias
         switch (choice) {
-            case 1: {
+            case 1: {  // Abrir conta
                 std::string full_name = getValidatedStringInput("Nome completo: ", true);
                 std::string national_id = getValidatedStringInput("BI: ", true);
                 std::string nationality = getValidatedStringInput("Nacionalidade: ", true);
@@ -146,7 +161,7 @@ int main() {
                 std::cout << "\nConta aberta com sucesso! Numero da conta: " << account_number << std::endl;
                 break;
             }
-            case 2: {
+            case 2: {  // Depositar
                 int acc_num_deposit = getValidatedInput<int>("Numero da conta: ");
                 double amount_deposit = getValidatedInput<double>("Valor a depositar: ");
 
@@ -157,7 +172,7 @@ int main() {
                 }
                 break;
             }
-            case 3: {
+            case 3: {  // Levantar
                 int acc_num_withdraw = getValidatedInput<int>("Numero da conta: ");
                 double amount_withdraw = getValidatedInput<double>("Valor a levantar: ");
 
@@ -168,16 +183,16 @@ int main() {
                 }
                 break;
             }
-            case 4: {
+            case 4: {  // Consultar conta
                 int acc_num_consult = getValidatedInput<int>("Numero da conta: ");
                 umabank.list_accounts();
                 break;
             }
-            case 5: {
+            case 5: {  // Listar todas as contas
                 umabank.list_accounts();
                 break;
             }
-            case 6: {
+            case 6: {  // Transferência
                 int from_account = getValidatedInput<int>("Conta de origem: ");
                 int to_account = getValidatedInput<int>("Conta de destino: ");
                 double amount = getValidatedInput<double>("Valor a transferir: ");
@@ -189,7 +204,7 @@ int main() {
                 }
                 break;
             }
-            case 7: {
+            case 7: {  // Encerrar conta
                 int acc_num_close = getValidatedInput<int>("Numero da conta a encerrar: ");
                 if (umabank.close_account(acc_num_close)) {
                     std::cout << "\nConta encerrada com sucesso!" << std::endl;
@@ -198,7 +213,7 @@ int main() {
                 }
                 break;
             }
-            case 0:
+            case 0:  // Sair
                 umabank.save_accounts();
                 std::cout << "\nObrigado por usar o UMA Banking System!" << std::endl;
                 break;
