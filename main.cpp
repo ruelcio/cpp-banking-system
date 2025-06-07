@@ -3,7 +3,8 @@
 #include <iostream>    // Para usar std::cout e std::endl
 #include <vector>      // Já incluído por Bank.h, mas pode manter para clareza
 #include <string>      // Já incluído por Account.h e Bank.h, mas pode manter para clareza
-#include <limits>      // *** IMPORTANTE: Adicionado para std::numeric_limits ***
+#include <limits>
+#include <utility>      // *** IMPORTANTE: Adicionado para std::numeric_limits ***
 #include <ios>         // Para std::streamsize, que é usado com std::numeric_limits
 
 // Função auxiliar para obter um valor numérico (double ou int) de forma segura
@@ -48,7 +49,7 @@ int main() {
         std::cout << "4. Consultar Conta" << std::endl;
         std::cout << "5. Listar Todas as Contas" << std::endl;
         std::cout << "6. Transferencia" << std::endl;
-        std::cout << "7. Pagamento de Servicos (Nao implementado)" << std::endl;
+        std::cout << "7. Pagamento de Servicos" << std::endl;
         std::cout << "8. Salvar Contas no Ficheiro" << std::endl;
         std::cout << "0. Sair" << std::endl;
         std::cout << "Escolha uma opcao: ";
@@ -128,8 +129,14 @@ int main() {
             umabank.transfer(from_acc_num, to_acc_num, transfer_amount);
             break;
             }
-            case 7: { // Pagamento de Servicos (Nao implementado ainda)
-                std::cout << "Funcionalidade de Pagamento de Servicos ainda nao implementada." << std::endl;
+            case 7: { 
+                std::cout << "\n--- Pagamento de Servicos ---" << std::endl;
+                umabank.listAvailableServices(); // Mostra os serviços disponíveis
+
+                int acc_num_pay = getNumericInput<int>("Numero da conta para pagar: ");
+                int service_id_pay = getNumericInput<int>("Digite o ID do servico a pagar: ");
+
+                umabank.payService(acc_num_pay, service_id_pay);
                 break;
             }
             case 8: { // Salvar Contas
