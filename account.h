@@ -1,5 +1,5 @@
-#ifndef ACCOUNT.H
-#define ACCOUNT.H
+#ifndef ACCOUNT_H
+#define ACCOUNT_H
 
 #include <iostream>
 #include <string>
@@ -16,10 +16,12 @@ class   Account
         std::string iban;
 
     public:
-        Account(int account_number, double balance, const std::string& full_name, const std::string& national_id, const std::string& nationality, const std::string& birth_date, const std::string& iban)
-        {
-
-        }
+        Account(int account_number, double balance, 
+                const std::string& full_name, 
+                const std::string& national_id, 
+                const std::string& nationality, 
+                const std::string& birth_date, 
+                const std::string& iban);
 
         int get_account_number() const;
         double  get_balance() const;
