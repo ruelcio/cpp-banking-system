@@ -34,6 +34,15 @@ std::string getStringInput(const std::string& prompt) {
     return value;
 }
 
+std::string formatAccountNumber(int number, int width) {
+    std::string s = std::to_string(number);
+    // Se o número for menor que a largura desejada, adiciona zeros à esquerda
+    if (s.length() < width) {
+        return std::string(width - s.length(), '0') + s;
+    }
+    return s;
+}
+
 int main() {
     Bank umabank; // Cria uma instância do seu banco
 
@@ -65,11 +74,15 @@ int main() {
                 std::string birth_date = getStringInput("Data de Nascimento (DD-MM-AAAA): ");
 
                 // Geracao automatica de numero de conta e IBAN
-                // *** CORREÇÃO AQUI: Usando o método publico do Bank ***
                 int new_account_num = umabank.generateNextAccountNumber();
 
-                // IBAN simplificado (pode ser melhorado depois para ser mais realista)
-                std::string new_iban = "AO060001" + std::to_string(new_account_num) + "00000000000";
+                // *** MELHORIA NA GERAÇÃO DO IBAN AQUI ***
+                // Estrutura IBAN Angolano (simplificada): AO + 2 digitos de controlo + 4 Banco + 4 Agencia + 11 Conta + 2 Controlo Interno = 25 chars
+                // Vamos usar: AO + 06 (Digitos de Controlo Fixos) + 0001 (Banco Fixo) + 0000 (Agencia Fixo) + [Numero da Conta 7 digitos formatado] + 00 (Controlo Interno Fixo)
+                std::string formatted_account_num = formatAccountNumber(new_account_num, 7); // Formata com 7 dígitos
+
+                std::string new_iban = "AO0600010000" + formatted_account_num + "00";
+                // Exemplo: AO0600010000000100000 (para conta 1000)
 
                 Account newAccount(new_account_num, 0.0, full_name, national_id, nationality, birth_date, new_iban);
                 umabank.addAccount(newAccount);
