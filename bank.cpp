@@ -41,6 +41,55 @@ void Bank::listAllAccounts() const {
     std::cout << "------------------------" << std::endl;
 }
 
+bool Bank::transfer(int from_account_num, int to_account_num, double amount) {
+    // 1. Validar o valor da transferência
+    if (amount <= 0) {
+        std::cout << "Erro na transferencia: O valor deve ser positivo." << std::endl;
+        return false;
+    }
+
+    // 2. Encontrar as contas de origem e destino
+    Account* from_account = findAccount(from_account_num);
+    Account* to_account = findAccount(to_account_num);
+
+    // 3. Verificar se as contas existem
+    if (from_account == nullptr) {
+        std::cout << "Erro na transferencia: Conta de origem (" << from_account_num << ") nao encontrada." << std::endl;
+        return false;
+    }
+    if (to_account == nullptr) {
+        std::cout << "Erro na transferencia: Conta de destino (" << to_account_num << ") nao encontrada." << std::endl;
+        return false;
+    }
+
+    // 4. Verificar se as contas de origem e destino nao sao a mesma
+    if (from_account_num == to_account_num) {
+        std::cout << "Erro na transferencia: As contas de origem e destino nao podem ser as mesmas." << std::endl;
+        return false;
+    }
+
+    // 5. Tentar retirar o valor da conta de origem
+    // O método withdraw ja valida o saldo
+    if (!from_account->withdraw(amount)) {
+        // withdraw retorna false se o saldo for insuficiente ou o valor for invalido
+        std::cout << "Erro na transferencia: Saldo insuficiente na conta de origem ("
+                  << from_account_num << ") ou valor invalido para levantar." << std::endl;
+        return false;
+    }
+
+    // 6. Depositar o valor na conta de destino
+    // Se o withdraw foi bem-sucedido, o deposit deve ser feito.
+    // O metodo deposit ja valida o valor, mas ja validamos acima que amount > 0.
+    to_account->deposit(amount);
+
+    std::cout << "Transferencia de " << amount << " EUR de " << from_account_num
+              << " para " << to_account_num << " realizada com sucesso!" << std::endl;
+    std::cout << "Novo saldo da conta " << from_account_num << ": " << from_account->get_balance() << " EUR" << std::endl;
+    std::cout << "Novo saldo da conta " << to_account_num << ": " << to_account->get_balance() << " EUR" << std::endl;
+
+    return true; // Transferencia bem-sucedida
+}
+
 // Implementacao de saveAccountsToFile
 void Bank::saveAccountsToFile(const std::string& filename) const {
     std::ofstream ofs(filename); // Abre o ficheiro para escrita

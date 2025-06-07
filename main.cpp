@@ -47,7 +47,7 @@ int main() {
         std::cout << "3. Levantar" << std::endl;
         std::cout << "4. Consultar Conta" << std::endl;
         std::cout << "5. Listar Todas as Contas" << std::endl;
-        std::cout << "6. Transferencia (Nao implementado)" << std::endl;
+        std::cout << "6. Transferencia" << std::endl;
         std::cout << "7. Pagamento de Servicos (Nao implementado)" << std::endl;
         std::cout << "8. Salvar Contas no Ficheiro" << std::endl;
         std::cout << "0. Sair" << std::endl;
@@ -119,9 +119,14 @@ int main() {
                 umabank.listAllAccounts();
                 break;
             }
-            case 6: { // Transferencia (Nao implementado ainda)
-                std::cout << "Funcionalidade de Transferencia ainda nao implementada." << std::endl;
-                break;
+            case 6: { 
+                std::cout << "\n--- Realizar Transferencia ---" << std::endl;
+                int from_acc_num = getNumericInput<int>("Numero da conta de origem: ");
+                int to_acc_num = getNumericInput<int>("Numero da conta de destino: ");
+                double transfer_amount = getNumericInput<double>("Valor a transferir: ");
+
+            umabank.transfer(from_acc_num, to_acc_num, transfer_amount);
+            break;
             }
             case 7: { // Pagamento de Servicos (Nao implementado ainda)
                 std::cout << "Funcionalidade de Pagamento de Servicos ainda nao implementada." << std::endl;
