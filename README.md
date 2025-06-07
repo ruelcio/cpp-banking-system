@@ -1,6 +1,6 @@
 # UMA Banking System
 
-Um sistema bancário simples desenvolvido em C++ para gerenciamento de contas bancárias, com foco no contexto angolano.
+Um sistema bancário simples desenvolvido em C++ para gerenciamento de contas bancárias.
 
 ## Funcionalidades
 
@@ -83,14 +83,3 @@ Para contribuir com o projeto:
 4. Push para a branch (`git push origin feature/nova-feature`)
 5. Abra um Pull Request
 
-## Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
-
-## Autor
-
-Ruélcio João Muliata
-
-## Contato
-
-Para sugestões ou reportar problemas, por favor abra uma issue no repositório.
