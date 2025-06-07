@@ -1,37 +1,33 @@
 #ifndef BANK_H
 #define BANK_H
 
+#include "account.h"
 #include <vector>
 #include <string>
-#include <memory>
-#include <map>
-
-#include "account.h"
 
 class Bank {
 private:
-    std::vector<Account> accounts; // Um vetor para guardar todas as contas
-    int next_account_number;       // Para atribuir números de conta automaticamente
-    std::map<int, std::pair<std::string, double>> services;
+    std::vector<Account> accounts;
+    int next_account_number;
+    std::string generate_iban(int account_number) const;
 
 public:
-    // Construtor do Bank
     Bank();
 
-    // Métodos essenciais
-    void addAccount(const Account& new_account);
-    Account* findAccount(int account_number);
-    void listAllAccounts() const;
-    int generateNextAccountNumber();
-    
-    // Métodos para persistência (salvar/carregar)
-    void saveAccountsToFile(const std::string& filename) const;
-    void loadAccountsFromFile(const std::string& filename);
+    int open_account(const std::string& full_name,
+                    const std::string& national_id,
+                    const std::string& nationality,
+                    const std::string& birth_date,
+                    double initial_balance);
 
-    bool transfer(int from_account_num, int to_account_num, double amount);
+    bool close_account(int account_number);
+    bool deposit(int account_number, double amount);
+    bool withdraw(int account_number, double amount);
+    bool transfer(int from_account, int to_account, double amount);
+    void list_accounts() const;
 
-    bool payService(int account_num, int service_id);
-    void listAvailableServices() const;
+    void save_accounts() const;
+    void load_accounts();
 };
 
 #endif

@@ -1,174 +1,135 @@
-#include "Bank.h"
-#include <iostream>   // For std::cout
-#include <fstream>    // For handling files (save/load)
-#include <limits>     // For std::numeric_limits (useful for input buffer cleanup)
-#include <utility>    // For std::pair (used in the map value)
+#include "bank.h"
+#include <fstream>
+#include <iostream>
 #include <iomanip>
+#include <algorithm>
 #include <sstream>
 
-// Construtor: Inicializa o próximo número de conta e os serviços
-Bank::Bank() : next_account_number(1000) { // Starts from 1000, or whatever you want
-    // Initialize the 5 services
-    services[101] = {"Agua", 5000.0};      // ID 101: Agua, Value 5000 Kz (assuming Kwanzas as currency)
-    services[102] = {"Electricidade", 7500.0}; // ID 102: Electricidade, Value 7500 Kz
-    services[103] = {"Internet", 10000.0}; // ID 103: Internet, Value 10000 Kz
-    services[104] = {"Telefone", 3000.0};    // ID 104: Telefone, Value 3000 Kz
-    services[105] = {"Gas", 4000.0};         // ID 105: Gas, Value 4000 Kz
+Bank::Bank() : next_account_number(1000) {}
 
-    // Optional: try to load accounts from a file when the bank starts
-    loadAccountsFromFile("contas.txt");
-}
-
-// Method to add an existing account (useful for loading from file)
-void Bank::addAccount(const Account& new_account) {
+int Bank::open_account(const std::string& full_name,
+                      const std::string& national_id,
+                      const std::string& nationality,
+                      const std::string& birth_date,
+                      double initial_balance) {
+    int account_number = next_account_number++;
+    std::string iban = generate_iban(account_number);
+    
+    Account new_account(account_number, initial_balance, full_name,
+                       national_id, nationality, birth_date, iban);
+    
     accounts.push_back(new_account);
+    save_accounts();
+    return account_number;
 }
 
-// Method to find an account by number
-Account* Bank::findAccount(int account_number) {
-    for (size_t i = 0; i < accounts.size(); ++i) { // Iterate over accounts
-        if (accounts[i].get_account_number() == account_number) {
-            return &accounts[i]; // Return a pointer to the found account
-        }
-    }
-    return nullptr; // Return nullptr if the account is not found
-}
+bool Bank::close_account(int account_number) {
+    auto it = std::find_if(accounts.begin(), accounts.end(),
+        [account_number](const Account& acc) {
+            return acc.get_account_number() == account_number;
+        });
 
-// Implementation of the method to generate the next account number
-int Bank::generateNextAccountNumber() {
-    return next_account_number++; // Returns the current value and then increments it
-}
-
-// Implementation of the transfer method
-bool Bank::transfer(int from_account_num, int to_account_num, double amount) {
-    Account* from_account = findAccount(from_account_num);
-    Account* to_account = findAccount(to_account_num);
-
-    if (!from_account || !to_account) {
-        std::cout << "Uma ou ambas as contas nao foram encontradas." << std::endl;
-        return false;
-    }
-
-    if (from_account->withdraw(amount)) {
-        to_account->deposit(amount);
-        std::cout << "Transferencia de " << std::fixed << std::setprecision(2) << amount << " AOA de " 
-                  << from_account_num << " para " << to_account_num << " realizada com sucesso!" << std::endl;
-        std::cout << "Novo saldo da conta " << from_account_num << ": " 
-                  << std::fixed << std::setprecision(2) << from_account->get_balance() << " AOA" << std::endl;
-        std::cout << "Novo saldo da conta " << to_account_num << ": " 
-                  << std::fixed << std::setprecision(2) << to_account->get_balance() << " AOA" << std::endl;
+    if (it != accounts.end()) {
+        accounts.erase(it);
+        save_accounts();
         return true;
     }
-
-    std::cout << "Transferencia falhou. Saldo insuficiente na conta de origem." << std::endl;
     return false;
 }
 
-// Implementation of the method to list available services
-void Bank::listAvailableServices() const {
-    if (services.empty()) {
-        std::cout << "Nenhum servico disponivel no momento." << std::endl;
-        return;
+bool Bank::deposit(int account_number, double amount) {
+    auto it = std::find_if(accounts.begin(), accounts.end(),
+        [account_number](const Account& acc) {
+            return acc.get_account_number() == account_number;
+        });
+
+    if (it != accounts.end()) {
+        it->deposit(amount);
+        save_accounts();
+        return true;
     }
-    std::cout << "\n--- Servicos Disponiveis ---" << std::endl;
-    std::cout << "ID\tServico\t\tValor Padrao (Kz)" << std::endl;
-    std::cout << "-----------------------------------" << std::endl;
-    for (const auto& entry : services) {
-        // Adjust spacing based on service name to align better
-        std::cout << entry.first << "\t" << entry.second.first;
-        if (entry.second.first.length() < 8) std::cout << "\t"; // Extra spacing for short names
-        std::cout << "\t" << entry.second.second << std::endl;
-    }
-    std::cout << "-----------------------------------" << std::endl;
+    return false;
 }
 
-void Bank::listAllAccounts() const {
+bool Bank::withdraw(int account_number, double amount) {
+    auto it = std::find_if(accounts.begin(), accounts.end(),
+        [account_number](const Account& acc) {
+            return acc.get_account_number() == account_number;
+        });
+
+    if (it != accounts.end() && it->withdraw(amount)) {
+        save_accounts();
+        return true;
+    }
+    return false;
+}
+
+bool Bank::transfer(int from_account, int to_account, double amount) {
+    auto from_it = std::find_if(accounts.begin(), accounts.end(),
+        [from_account](const Account& acc) {
+            return acc.get_account_number() == from_account;
+        });
+
+    auto to_it = std::find_if(accounts.begin(), accounts.end(),
+        [to_account](const Account& acc) {
+            return acc.get_account_number() == to_account;
+        });
+
+    if (from_it != accounts.end() && to_it != accounts.end() && from_it->withdraw(amount)) {
+        to_it->deposit(amount);
+        save_accounts();
+        return true;
+    }
+    return false;
+}
+
+void Bank::list_accounts() const {
     if (accounts.empty()) {
-        std::cout << "Nao ha contas registadas no banco." << std::endl;
-        return;
-    }
-    std::cout << "--- Contas no UMABANK ---" << std::endl;
-    for (const auto& acc : accounts) { // Usa o operator<< da classe Account
-        std::cout << acc << std::endl;
-    }
-    std::cout << "------------------------" << std::endl;
-}
-
-// Implementation of the Service Payment method
-bool Bank::payService(int account_num, int service_id) {
-    // 1. Find the account
-    Account* account = findAccount(account_num);
-    if (account == nullptr) {
-        std::cout << "Erro no pagamento: Conta " << account_num << " nao encontrada." << std::endl;
-        return false;
-    }
-
-    // 2. Find the service
-    auto service_it = services.find(service_id);
-    if (service_it == services.end()) { // service_it == services.end() means the ID was not found
-        std::cout << "Erro no pagamento: Servico com ID " << service_id << " nao encontrado." << std::endl;
-        return false;
-    }
-
-    std::string service_name = service_it->second.first;
-    double service_cost = service_it->second.second;
-
-    // 3. Try to withdraw the amount from the account
-    // The withdraw method already validates the balance and if the value is positive
-    if (!account->withdraw(service_cost)) {
-        std::cout << "Erro no pagamento do servico '" << service_name << "': Saldo insuficiente na conta "
-                  << account_num << " ou valor invalido." << std::endl;
-        return false;
-    }
-
-    std::cout << "Pagamento do servico '" << service_name << "' (" << service_cost
-              << " Kz) da conta " << account_num << " realizado com sucesso!" << std::endl;
-    std::cout << "Novo saldo da conta " << account_num << ": " << account->get_balance() << " Kz" << std::endl;
-    return true;
-}
-
-// Implementation of saveAccountsToFile
-void Bank::saveAccountsToFile(const std::string& filename) const {
-    std::ofstream ofs(filename); // Open file for writing
-    if (!ofs.is_open()) {
-        std::cerr << "Erro: Nao foi possivel abrir o ficheiro " << filename << " para escrita." << std::endl;
-        return;
-    }
-    for (const auto& acc : accounts) {
-        ofs << acc.toFileString() << std::endl; // Save each account as a line
-    }
-    ofs.close();
-    std::cout << "Contas salvas em " << filename << std::endl;
-}
-
-// Implementation of loadAccountsFromFile
-void Bank::loadAccountsFromFile(const std::string& filename) {
-    std::ifstream ifs(filename); // Open file for reading
-    if (!ifs.is_open()) {
-        std::cerr << "Aviso: Nao foi possivel abrir o ficheiro " << filename << " para leitura. Comecando com contas vazias." << std::endl;
+        std::cout << "\nNenhuma conta cadastrada." << std::endl;
         return;
     }
 
-    accounts.clear(); // Clear existing accounts before loading new ones
+    std::cout << "\n=== LISTA DE CONTAS ===" << std::endl;
+    for (const auto& account : accounts) {
+        std::cout << account << std::endl;
+    }
+}
+
+void Bank::save_accounts() const {
+    std::ofstream file("contas.txt");
+    if (!file.is_open()) {
+        std::cerr << "Erro ao abrir arquivo para salvar contas." << std::endl;
+        return;
+    }
+
+    for (const auto& account : accounts) {
+        file << account.toFileString() << std::endl;
+    }
+}
+
+void Bank::load_accounts() {
+    std::ifstream file("contas.txt");
+    if (!file.is_open()) {
+        return;
+    }
+
+    accounts.clear();
     std::string line;
-    while (std::getline(ifs, line)) {
-        if (!line.empty()) {
-            accounts.push_back(Account::fromFileString(line)); // Use the static method to create the account
+    while (std::getline(file, line)) {
+        try {
+            accounts.push_back(Account::fromFileString(line));
+        } catch (const std::exception& e) {
+            std::cerr << "Erro ao carregar conta: " << e.what() << std::endl;
         }
     }
-    ifs.close();
-    std::cout << "Contas carregadas de " << filename << std::endl;
 
-    // Update next_account_number to be greater than any loaded account
     if (!accounts.empty()) {
-        int max_acc_num = 0;
-        for (const auto& acc : accounts) {
-            if (acc.get_account_number() > max_acc_num) {
-                max_acc_num = acc.get_account_number();
-            }
-        }
-        next_account_number = max_acc_num + 1;
-    } else {
-        next_account_number = 1000; // If none loaded, revert to initial
+        next_account_number = accounts.back().get_account_number() + 1;
     }
+}
+
+std::string Bank::generate_iban(int account_number) const {
+    std::stringstream ss;
+    ss << "AO06" << std::setw(21) << std::setfill('0') << account_number;
+    return ss.str();
 }

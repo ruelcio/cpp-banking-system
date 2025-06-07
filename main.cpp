@@ -1,286 +1,209 @@
 #include "Account.h"
-#include "Bank.h"      // Inclui a sua nova classe Bank
-#include <iostream>    // Para usar std::cout e std::endl
-#include <vector>      // Já incluído por Bank.h, mas pode manter para clareza
-#include <string>      // Já incluído por Account.h e Bank.h, mas pode manter para clareza
+#include "Bank.h"
+#include <iostream>
+#include <vector>
+#include <string>
 #include <limits>
-#include <utility>      // *** IMPORTANTE: Adicionado para std::numeric_limits ***
-#include <ios>         // Para std::streamsize, que é usado com std::numeric_limits
-#include <iomanip>
-#include <windows.h>
+#include <utility>
+#include <ios>
 #include <regex>
 #include <ctime>
+#include <iomanip>
 #include <sstream>
+#include <algorithm>
 
-// Constantes para o contexto angolano
-const std::string MOEDA = "AOA"; // Kwanza
+// Constantes
+const std::string MOEDA = "AOA";
 
-// Função para definir a cor do texto no console
-void setColor(int color) {
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
+// Função para exibir o menu principal
+void displayMenu() {
+    std::cout << "\n=== UMABANK - Banco Angolano ===" << std::endl;
+    std::cout << "1. Abrir Conta" << std::endl;
+    std::cout << "2. Depositar" << std::endl;
+    std::cout << "3. Levantar" << std::endl;
+    std::cout << "4. Consultar Conta" << std::endl;
+    std::cout << "5. Listar Todas as Contas" << std::endl;
+    std::cout << "6. Transferencia" << std::endl;
+    std::cout << "7. Encerrar Conta" << std::endl;
+    std::cout << "0. Sair" << std::endl;
 }
 
-// Cores disponíveis
-const int COLOR_WHITE = 7;
-const int COLOR_GREEN = 10;
-const int COLOR_BLUE = 11;
-const int COLOR_RED = 12;
-const int COLOR_YELLOW = 14;
-
-// Função para limpar a tela
-void clearScreen() {
-    system("cls");
-}
-
-// Função para desenhar uma linha
-void drawLine(char symbol = '=', int length = 50) {
-    std::cout << std::string(length, symbol) << std::endl;
-}
-
-// Função para centralizar texto
-void centerText(const std::string& text, int width = 50) {
-    int padding = (width - text.length()) / 2;
-    std::cout << std::string(padding, ' ') << text << std::endl;
-}
-
-// Função para exibir o cabeçalho
-void displayHeader() {
-    clearScreen();
-    setColor(COLOR_BLUE);
-    drawLine();
-    centerText("UMABANK - Sistema Bancário");
-    drawLine();
-    setColor(COLOR_WHITE);
-}
-
-// Função para validar BI (número de identificação)
+// Funções de validação
 bool isValidBI(const std::string& bi) {
-    // Remove espaços e hífens
     std::string clean_bi = bi;
     clean_bi.erase(std::remove_if(clean_bi.begin(), clean_bi.end(), 
         [](char c) { return c == ' ' || c == '-'; }), clean_bi.end());
     
-    // Verifica se tem entre 8 e 15 dígitos (mais flexível)
     if (clean_bi.length() < 8 || clean_bi.length() > 15) return false;
-    
-    // Verifica se todos são dígitos
     return std::all_of(clean_bi.begin(), clean_bi.end(), ::isdigit);
 }
 
-// Função para validar data de nascimento (formato DD-MM-AAAA)
 bool isValidDate(const std::string& date) {
     std::regex date_pattern("^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\\d{4}$");
     if (!std::regex_match(date, date_pattern)) return false;
 
-    // Extrai dia, mês e ano
     int day = std::stoi(date.substr(0, 2));
     int month = std::stoi(date.substr(3, 2));
     int year = std::stoi(date.substr(6, 4));
 
-    // Verifica se a data é válida
     if (year < 1900 || year > 2024) return false;
     if (month < 1 || month > 12) return false;
     
-    // Verifica dias por mês
     int days_in_month[] = {31,28,31,30,31,30,31,31,30,31,30,31};
     if (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)) days_in_month[1] = 29;
     
     return day >= 1 && day <= days_in_month[month-1];
 }
 
-// Função para validar nome completo
 bool isValidName(const std::string& name) {
     if (name.empty() || name.length() < 3) return false;
-    
-    // Verifica se contém apenas letras, espaços e caracteres especiais comuns em nomes
     std::regex name_pattern("^[A-Za-zÀ-ÿ\\s'-]+$");
     return std::regex_match(name, name_pattern);
 }
 
-// Função para validar valor monetário (ajustado para Kwanza)
 bool isValidAmount(double amount) {
-    return amount > 0 && amount <= 10000000; // Limite máximo de 10 milhões Kwanza
+    return amount > 0 && amount <= 10000000;
 }
 
-// Função para obter um valor numérico (double ou int) de forma segura
+// Função genérica para entrada validada
 template <typename T>
-T getNumericInput(const std::string& prompt, bool validate = false) {
+T getValidatedInput(const std::string& prompt, bool validate = false) {
     T value;
     while (true) {
         std::cout << prompt;
         std::cin >> value;
         if (std::cin.fail()) {
-            std::cout << "Entrada invalida. Por favor, digite um numero valido." << std::endl;
+            std::cout << "Entrada invalida. Por favor, digite um valor valido." << std::endl;
             std::cin.clear();
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         } else {
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            if (!validate || isValidAmount(value)) {
-                return value;
+            if (typeid(T) == typeid(double)) {
+                if (!validate || isValidAmount(value)) {
+                    return value;
+                } else {
+                    std::cout << "Valor invalido. O valor deve estar entre 0 e 10.000.000." << std::endl;
+                }
             } else {
-                std::cout << "Valor invalido. O valor deve estar entre 0 e 10000000." << std::endl;
+                return value;
             }
         }
     }
 }
 
-// Função para obter uma string com validação
-std::string getStringInput(const std::string& prompt, bool validate = false, const std::string& type = "") {
+// Especialização para std::string
+std::string getValidatedStringInput(const std::string& prompt, bool validate = false) {
     std::string value;
     while (true) {
         std::cout << prompt;
         std::getline(std::cin, value);
-        
-        if (validate) {
-            bool isValid = false;
-            if (type == "name") {
-                isValid = isValidName(value);
-                if (!isValid) std::cout << "Nome invalido. Use apenas letras e caracteres especiais comuns em nomes." << std::endl;
-            } else if (type == "bi") {
-                isValid = isValidBI(value);
-                if (!isValid) std::cout << "BI invalido. Deve conter entre 8 e 15 digitos." << std::endl;
-            } else if (type == "date") {
-                isValid = isValidDate(value);
-                if (!isValid) std::cout << "Data invalida. Use o formato DD-MM-AAAA." << std::endl;
-            }
-            
-            if (isValid) return value;
+        if (!validate) return value;
+        if (prompt.find("Nome") != std::string::npos) {
+            if (isValidName(value)) return value;
+            std::cout << "Nome invalido. Use apenas letras e caracteres especiais comuns em nomes." << std::endl;
+        } else if (prompt.find("BI") != std::string::npos) {
+            if (isValidBI(value)) return value;
+            std::cout << "BI invalido. Deve conter entre 8 e 15 digitos." << std::endl;
+        } else if (prompt.find("Data") != std::string::npos) {
+            if (isValidDate(value)) return value;
+            std::cout << "Data invalida. Use o formato DD-MM-AAAA." << std::endl;
         } else {
             return value;
         }
     }
 }
 
-std::string formatAccountNumber(int number, int width) {
-    std::string s = std::to_string(number);
-    // Se o número for menor que a largura desejada, adiciona zeros à esquerda
-    if (s.length() < width) {
-        return std::string(width - s.length(), '0') + s;
-    }
-    return s;
-}
-
-// Função para formatar valores em Kwanza
 std::string formatarKwanza(double valor) {
     std::stringstream ss;
     ss << std::fixed << std::setprecision(2) << valor << " " << MOEDA;
     return ss.str();
 }
 
+std::string formatAccountNumber(int number, int width) {
+    std::string s = std::to_string(number);
+    return s.length() < width ? std::string(width - s.length(), '0') + s : s;
+}
+
+// Função principal
 int main() {
-    Bank umabank; // Cria uma instância do seu banco
-    umabank.loadAccountsFromFile("contas.txt");
+    Bank umabank;
+    umabank.load_accounts();
 
     int choice;
     do {
-        std::cout << "\n=== UMABANK - Banco Angolano ===" << std::endl;
-        std::cout << "1. Abrir Conta" << std::endl;
-        std::cout << "2. Depositar" << std::endl;
-        std::cout << "3. Levantar" << std::endl;
-        std::cout << "4. Consultar Conta" << std::endl;
-        std::cout << "5. Listar Todas as Contas" << std::endl;
-        std::cout << "6. Transferencia" << std::endl;
-        std::cout << "7. Pagamento de Servicos" << std::endl;
-        std::cout << "8. Salvar Contas no Ficheiro" << std::endl;
-        std::cout << "0. Sair" << std::endl;
-        std::cout << "Escolha uma opcao: ";
-        choice = getNumericInput<int>("");
+        displayMenu();
+        choice = getValidatedInput<int>("Escolha uma opcao: ");
 
         switch (choice) {
             case 1: {
-                std::cout << "\n--- Abrir Nova Conta ---" << std::endl;
-                std::string full_name = getStringInput("Nome Completo: ", true, "name");
-                std::string national_id = getStringInput("Numero do BI: ", true, "bi");
-                std::string nationality = getStringInput("Nacionalidade: ", true, "name");
-                std::string birth_date = getStringInput("Data de Nascimento (DD-MM-AAAA): ", true, "date");
+                std::string full_name = getValidatedStringInput("Nome completo: ", true);
+                std::string national_id = getValidatedStringInput("BI: ", true);
+                std::string nationality = getValidatedStringInput("Nacionalidade: ", true);
+                std::string birth_date = getValidatedStringInput("Data de nascimento (DD/MM/AAAA): ", true);
+                double initial_balance = getValidatedInput<double>("Saldo inicial: ");
 
-                int new_account_num = umabank.generateNextAccountNumber();
-                std::string formatted_account_num = formatAccountNumber(new_account_num, 7);
-                std::string new_iban = "AO0600010000" + formatted_account_num + "00";
-
-                Account newAccount(new_account_num, 0.0, full_name, national_id, nationality, birth_date, new_iban);
-                umabank.addAccount(newAccount);
-                std::cout << "Conta aberta com sucesso!" << std::endl;
-                std::cout << "Numero: " << new_account_num << std::endl;
-                std::cout << "IBAN: " << new_iban << std::endl;
-                std::cout << newAccount << std::endl;
+                int account_number = umabank.open_account(full_name, national_id, nationality, birth_date, initial_balance);
+                std::cout << "\nConta aberta com sucesso! Numero da conta: " << account_number << std::endl;
                 break;
             }
             case 2: {
-                int acc_num_deposit = getNumericInput<int>("Numero da conta para depositar: ");
-                double amount_deposit = getNumericInput<double>("Valor a depositar: ", true);
+                int acc_num_deposit = getValidatedInput<int>("Numero da conta: ");
+                double amount_deposit = getValidatedInput<double>("Valor a depositar: ");
 
-                Account* acc_to_deposit = umabank.findAccount(acc_num_deposit);
-                if (acc_to_deposit) {
-                    acc_to_deposit->deposit(amount_deposit);
-                    std::cout << "Deposito realizado. Novo saldo: " << formatarKwanza(acc_to_deposit->get_balance()) << std::endl;
+                if (umabank.deposit(acc_num_deposit, amount_deposit)) {
+                    std::cout << "\nDeposito realizado com sucesso!" << std::endl;
                 } else {
-                    std::cout << "Conta nao encontrada." << std::endl;
+                    std::cout << "\nErro ao realizar deposito. Verifique o numero da conta." << std::endl;
                 }
                 break;
             }
             case 3: {
-                int acc_num_withdraw = getNumericInput<int>("Numero da conta para levantar: ");
-                double amount_withdraw = getNumericInput<double>("Valor a levantar: ", true);
+                int acc_num_withdraw = getValidatedInput<int>("Numero da conta: ");
+                double amount_withdraw = getValidatedInput<double>("Valor a levantar: ");
 
-                Account* acc_to_withdraw = umabank.findAccount(acc_num_withdraw);
-                if (acc_to_withdraw) {
-                    if (acc_to_withdraw->withdraw(amount_withdraw)) {
-                        std::cout << "Levantamento realizado. Novo saldo: " << formatarKwanza(acc_to_withdraw->get_balance()) << std::endl;
-                    } else {
-                        std::cout << "Levantamento falhou. Valor invalido ou saldo insuficiente." << std::endl;
-                    }
+                if (umabank.withdraw(acc_num_withdraw, amount_withdraw)) {
+                    std::cout << "\nLevantamento realizado com sucesso!" << std::endl;
                 } else {
-                    std::cout << "Conta nao encontrada." << std::endl;
+                    std::cout << "\nErro ao realizar levantamento. Verifique o numero da conta e o saldo." << std::endl;
                 }
                 break;
             }
-            case 4: { // Consultar
-                int acc_num_consult = getNumericInput<int>("Numero da conta para consultar: ");
-                Account* acc_to_consult = umabank.findAccount(acc_num_consult);
-                if (acc_to_consult) {
-                    std::cout << *acc_to_consult << std::endl; // Imprime os detalhes da conta
+            case 4: {
+                int acc_num_consult = getValidatedInput<int>("Numero da conta: ");
+                umabank.list_accounts();
+                break;
+            }
+            case 5: {
+                umabank.list_accounts();
+                break;
+            }
+            case 6: {
+                int from_account = getValidatedInput<int>("Conta de origem: ");
+                int to_account = getValidatedInput<int>("Conta de destino: ");
+                double amount = getValidatedInput<double>("Valor a transferir: ");
+
+                if (umabank.transfer(from_account, to_account, amount)) {
+                    std::cout << "\nTransferencia realizada com sucesso!" << std::endl;
                 } else {
-                    std::cout << "Conta nao encontrada." << std::endl;
+                    std::cout << "\nErro ao realizar transferencia. Verifique os numeros das contas e o saldo." << std::endl;
                 }
                 break;
             }
-            case 5: { // Listar Todas as Contas
-                umabank.listAllAccounts();
+            case 7: {
+                int acc_num_close = getValidatedInput<int>("Numero da conta a encerrar: ");
+                if (umabank.close_account(acc_num_close)) {
+                    std::cout << "\nConta encerrada com sucesso!" << std::endl;
+                } else {
+                    std::cout << "\nErro ao encerrar conta. Verifique o numero da conta." << std::endl;
+                }
                 break;
             }
-            case 6: { 
-                std::cout << "\n--- Realizar Transferencia ---" << std::endl;
-                int from_acc_num = getNumericInput<int>("Numero da conta de origem: ");
-                int to_acc_num = getNumericInput<int>("Numero da conta de destino: ");
-                double transfer_amount = getNumericInput<double>("Valor a transferir: ", true);
-
-            umabank.transfer(from_acc_num, to_acc_num, transfer_amount);
-            break;
-            }
-            case 7: { 
-                std::cout << "\n--- Pagamento de Servicos ---" << std::endl;
-                umabank.listAvailableServices(); // Mostra os serviços disponíveis
-
-                int acc_num_pay = getNumericInput<int>("Numero da conta para pagar: ");
-                int service_id_pay = getNumericInput<int>("Digite o ID do servico a pagar: ");
-
-                umabank.payService(acc_num_pay, service_id_pay);
+            case 0:
+                umabank.save_accounts();
+                std::cout << "\nObrigado por usar o UMA Banking System!" << std::endl;
                 break;
-            }
-            case 8: { // Salvar Contas
-                umabank.saveAccountsToFile("contas.txt");
-                break;
-            }
-            case 0: { // Sair
-                std::cout << "Saindo do UMABANK. Ate logo!" << std::endl;
-                umabank.saveAccountsToFile("contas.txt"); // Salva ao sair para nao perder dados
-                break;
-            }
-            default: {
-                std::cout << "Opcao invalida. Por favor, tente novamente." << std::endl;
-                break;
-            }
+            default:
+                std::cout << "\nOpcao invalida. Tente novamente." << std::endl;
         }
     } while (choice != 0);
 
