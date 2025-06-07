@@ -1,0 +1,12 @@
+# Executables
+*.exe
+*.out
+*.obj
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Compilation artifacts
+*.o
+*.gch
