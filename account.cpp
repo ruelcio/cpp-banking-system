@@ -2,6 +2,8 @@
 #include <sstream>
 #include <algorithm>
 #include <string>
+#include <iomanip>
+#include <iostream>
 
 Account::Account(int account_number_param, double balance_param,
                  const std::string& full_name_param,
@@ -48,6 +50,11 @@ std::string Account::get_birth_date() const
 std::string Account::get_iban() const
 {
     return iban;
+}
+
+std::string Account::get_nationality() const
+{
+    return nationality;
 }
 
 void    Account::deposit(double amount)
@@ -114,12 +121,13 @@ Account Account::fromFileString(const std::string& line)
 
 std::ostream& operator<<(std::ostream& os, const Account& acc)
 {
-    os << "Conta: " << acc.get_account_number()
-       << " | Titular: " << acc.get_full_name()
-       << " | Saldo: " << acc.get_balance()
-       << " | BI: " << acc.get_national_id()
-       << " | IBAN: " << acc.get_iban()
-       << std::endl;
-
-       return os;
+    os << "\n=== DETALHES DA CONTA ===" << std::endl;
+    os << "Numero da Conta: " << acc.get_account_number() << std::endl;
+    os << "IBAN: " << acc.get_iban() << std::endl;
+    os << "Titular: " << acc.get_full_name() << std::endl;
+    os << "BI: " << acc.get_national_id() << std::endl;
+    os << "Nacionalidade: " << acc.get_nationality() << std::endl;
+    os << "Data de Nascimento: " << acc.get_birth_date() << std::endl;
+    os << "Saldo: " << std::fixed << std::setprecision(2) << acc.get_balance() << " AOA" << std::endl;
+    return os;
 }
